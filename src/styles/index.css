@@ -1,0 +1,15 @@
+/* Styles are imported in cascade order to preserve the original design. */
+@import "./base/reset.css";
+@import "./components/header.css";
+@import "./pages/home.css";
+@import "./components/footer.css";
+@import "./base/themes.css";
+@import "./responsive/home.css";
+@import "./animations/routes.css";
+@import "./pages/auth.css";
+@import "./animations/auth.css";
+@import "./components/legal-footer.css";
+@import "./pages/legal.css";
+@import "./pages/feed.css";
+@import "./pages/confirm-email.css";
+@import "./pages/profile.css";

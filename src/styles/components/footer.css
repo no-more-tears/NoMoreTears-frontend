@@ -1,0 +1,28 @@
+.footer {
+  min-height: 87px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.footer-brand {
+  font-size: 14px;
+  letter-spacing: -.5px;
+}
+
+.footer-brand img {
+  width: 24px;
+  height: 24px;
+}
+
+.footer-brand > span {
+  margin-left: -10.5px;
+}
+
+.footer>span,
+.footer>a:last-child {
+  color: var(--muted);
+  font-size: 11px;
+}

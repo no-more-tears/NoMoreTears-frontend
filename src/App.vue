@@ -1,358 +1,254 @@
+
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+import Home from './Home.vue'
+import Auth from './Auth.vue'
+import ConfirmEmail from './ConfirmEmail.vue'
+import Legal from './Legal.vue'
+import Feed from './Feed.vue'
+import Profile from './Profile.vue'
 import {
-  ArrowUpRight,
-  ArrowRight,
-  Sun,
-  Moon,
-  Menu,
-  X,
-  Wrench,
-  Zap,
-  Droplets,
-  Sparkles,
-  Monitor,
-  ShieldCheck,
-  CircleCheck,
-  MapPin,
-  Clock3,
-  Check,
-  Star,
-  ClipboardList,
-  UserRoundCheck,
-  ChevronRight
-} from 'lucide-vue-next'
+  hasSession,
+  getTokens,
+  saveTokens,
+  identity,
+  users
+} from './services/api.js'
 
-const theme = ref('dark')
-const menuOpen = ref(false)
-const card = ref(null)
-const tilt = ref({ x: 0, y: 0 })
+const path = ref(window.location.pathname)
+const theme = ref(localStorage.getItem('nmt-theme') === 'light' ? 'light' : 'dark')
+const user = ref(null)
+const loadingSession = ref(true)
 
-const style3d = computed(() => ({
-  transform: `perspective(1000px) rotateX(${tilt.value.x}deg) rotateY(${tilt.value.y}deg)`
-}))
+const page = computed(() =>
+  path.value === '/confirm-email'
+    ? 'confirm-email'
+    : path.value.startsWith('/profile/')
+      ? 'profile'
+      : path.value === '/feed'
+        ? 'feed'
+        : ['/auth', '/confirm-email', '/reset-password'].includes(path.value)
+          ? 'auth'
+          : ['/privacy', '/terms', '/cookies'].includes(path.value)
+            ? 'legal'
+            : 'home'
+)
 
-const services = [
-  { name: 'Сантехніка', icon: Droplets },
-  { name: 'Електрика', icon: Zap },
-  { name: 'Ремонт техніки', icon: Monitor },
-  { name: 'Клінінг', icon: Sparkles },
-  { name: 'Інші роботи', icon: Wrench }
-]
-
-const steps = [
-  {
-    number: '01',
-    title: 'Опишіть задачу',
-    desc: 'Оберіть категорію, вкажіть адресу та додайте фото за потреби.'
-  },
-  {
-    number: '02',
-    title: 'Отримайте майстра',
-    desc: 'Заявку побачать верифіковані фахівці, які працюють у вашому районі.'
-  },
-  {
-    number: '03',
-    title: 'Оцініть результат',
-    desc: 'Після виконання залиште відгук або повідомте про проблему.'
+function navigate(url, replace = false) {
+  if (['/auth', '/reset-password'].includes(url) && user.value) {
+    url = '/feed'
   }
-]
 
-function setTheme(value) {
-  theme.value = value
-  document.documentElement.dataset.theme = value
-  localStorage.setItem('nmt-theme', value)
+  if ((url === '/feed' || url.startsWith('/profile/')) && !user.value) {
+    url = '/auth'
+  }
+
+  if (url !== path.value) {
+    if (replace) {
+      history.replaceState({}, '', url)
+    } else {
+      history.pushState({}, '', url)
+    }
+
+    path.value = url
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }
+}
+
+function signedIn(profile) {
+  user.value = profile
+  navigate('/feed')
+}
+
+async function logout() {
+  const refreshToken = getTokens()?.refreshToken
+
+  user.value = null
+  saveTokens(null)
+  navigate('/auth')
+
+  if (refreshToken) {
+    try {
+      await identity.logout(refreshToken)
+    } catch (e) {
+      console.warn('Не вдалося відкликати сесію на сервері:', e.message)
+    }
+  }
+}
+
+async function restoreSession() {
+  if (hasSession()) {
+    try {
+      user.value = await users.me()
+    } catch {
+      saveTokens(null)
+      user.value = null
+    }
+  }
+
+  if (
+    (path.value === '/feed' || path.value.startsWith('/profile/')) &&
+    !user.value
+  ) {
+    navigate('/auth', true)
+  } else if (
+    user.value &&
+    ['/auth', '/reset-password'].includes(path.value)
+  ) {
+    navigate('/feed', true)
+  }
+
+  loadingSession.value = false
+}
+
+function onPopstate() {
+  path.value = window.location.pathname
+
+  if (!loadingSession.value) {
+    if (
+      (path.value === '/feed' || path.value.startsWith('/profile/')) &&
+      !user.value
+    ) {
+      navigate('/auth', true)
+    } else if (
+      user.value &&
+      ['/auth', '/reset-password'].includes(path.value)
+    ) {
+      navigate('/feed', true)
+    }
+  }
+}
+
+function onNavigate(e) {
+  navigate(e.detail)
 }
 
 function toggleTheme() {
-  setTheme(theme.value === 'light' ? 'dark' : 'light')
+  theme.value = theme.value === 'dark' ? 'light' : 'dark'
+  applyTheme()
 }
 
-function moveCard(e) {
-  if (
-    !card.value ||
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  ) return
-
-  const r = card.value.getBoundingClientRect()
-  const x = (e.clientX - r.left) / r.width - .5
-  const y = (e.clientY - r.top) / r.height - .5
-
-  tilt.value = {
-    x: -y * 9,
-    y: x * 9
-  }
-}
-
-function resetCard() {
-  tilt.value = { x: 0, y: 0 }
-}
-
-function start() {
-  document.getElementById('how-it-works')?.scrollIntoView({
-    behavior: 'smooth'
-  })
-  menuOpen.value = false
-}
-
-function master() {
-  document.getElementById('for-masters')?.scrollIntoView({
-    behavior: 'smooth'
-  })
-  menuOpen.value = false
-}
-
-function keyHandler(e) {
-  if (e.key === 'Escape') menuOpen.value = false
+function applyTheme() {
+  document.documentElement.dataset.theme = theme.value
+  localStorage.setItem('nmt-theme', theme.value)
 }
 
 onMounted(() => {
-  setTheme(localStorage.getItem('nmt-theme') === 'dark' ? 'dark' : 'light')
-  window.addEventListener('keydown', keyHandler)
+  applyTheme()
+  restoreSession()
+  window.addEventListener('popstate', onPopstate)
+  window.addEventListener('nmt:navigate', onNavigate)
 })
 
-onUnmounted(() => window.removeEventListener('keydown', keyHandler))
+onUnmounted(() => {
+  window.removeEventListener('popstate', onPopstate)
+  window.removeEventListener('nmt:navigate', onNavigate)
+})
 </script>
 
 <template>
-  <div class="site-shell">
-    <header class="header wrap">
-      <a class="brand" aria-label="NoMoreTears — на головну">
-        <img src="/public/logo.png" alt="" draggable="false" />
-        <span>
-          NoMoreTears<span class="brand-dot">.</span>
-        </span>
-      </a>
+  <div
+    v-if="loadingSession"
+    class="session-loading"
+  >
+    Завантаження...
+  </div>
 
-      <nav class="desktop-nav" aria-label="Основна навігація">
-        <a href="#services">Послуги</a>
-        <a href="#how-it-works">Як це працює</a>
-        <a href="#for-masters">Для майстрів</a>
-      </nav>
+  <Transition
+    v-else
+    name="page-fade"
+    mode="out-in"
+    appear
+  >
+    <ConfirmEmail
+      v-if="page==='confirm-email'"
+      key="confirm-email"
+      :theme="theme"
+      @toggle-theme="toggleTheme"
+      @navigate="navigate"
+    />
 
-      <div class="header-actions">
-        <button
-          class="theme-toggle"
-          @click="toggleTheme"
-          :aria-label="theme==='dark'?'Увімкнути світлу тему':'Увімкнути темну тему'"
-          :title="theme==='dark'?'Світла тема':'Темна тема'"
+    <Auth
+      v-else-if="page==='auth'"
+      key="auth"
+      :theme="theme"
+      @toggle-theme="toggleTheme"
+      @navigate="navigate"
+      @signed-in="signedIn"
+    />
+
+    <Feed
+      v-else-if="page==='feed' && user"
+      key="feed"
+      :theme="theme"
+      :user="user"
+      @navigate="navigate"
+      @toggle-theme="toggleTheme"
+      @logout="logout"
+    />
+
+    <Profile
+      v-else-if="page==='profile' && user"
+      :key="path"
+      :user="user"
+      :login="decodeURIComponent(path.slice('/profile/'.length))"
+      @navigate="navigate"
+    />
+
+    <Legal
+      v-else-if="page==='legal'"
+      :key="path"
+      :page="path"
+      :theme="theme"
+      @navigate="navigate"
+      @toggle-theme="toggleTheme"
+    />
+
+    <div
+      v-else-if="['/settings','/help','/become-master','/new-request'].includes(path)"
+      :key="path"
+      class="placeholder-page"
+    >
+      <header class="auth-header">
+        <a
+          class="auth-brand"
+          href="/feed"
+          @click.prevent="navigate('/feed')"
         >
-          <Sun v-if="theme==='dark'" :size="18" />
-          <Moon v-else :size="18" />
-        </button>
+          <img src="/logo.png" alt="" />
+          NoMoreTears<span>.</span>
+        </a>
+      </header>
 
-        <button class="btn btn-primary nav-cta" @click="start">
-          Почати зараз
-          <ArrowUpRight :size="17" />
-        </button>
-
+      <main>
         <button
-          class="mobile-toggle"
-          @click="menuOpen=!menuOpen"
-          :aria-expanded="menuOpen"
-          aria-label="Відкрити меню"
+          class="auth-back"
+          @click="navigate('/feed')"
         >
-          <X v-if="menuOpen" :size="23" />
-          <Menu v-else :size="23" />
+          ← До стрічки
         </button>
-      </div>
-    </header>
 
-    <div v-if="menuOpen" class="mobile-nav">
-      <a href="#services" @click="menuOpen=false">Послуги</a>
-      <a href="#how-it-works" @click="menuOpen=false">Як це працює</a>
-      <a href="#for-masters" @click="menuOpen=false">Для майстрів</a>
+        <h1>
+          {{
+            {
+              '/profile': 'Мій профіль',
+              '/settings': 'Налаштування',
+              '/help': 'Допомога',
+              '/become-master': 'Стати майстром',
+              '/new-request': 'Створити заявку'
+            }[path]
+          }}
+        </h1>
 
-      <button class="btn btn-primary" @click="start">
-        Почати зараз
-        <ArrowUpRight :size="17" />
-      </button>
+        <p>
+          Цей розділ буде доступний після реалізації відповідного функціоналу.
+        </p>
+      </main>
     </div>
 
-    <main id="top">
-      <section class="hero wrap">
-        <div class="hero-copy">
-          <h1>
-            Проблема вдома?<br />
-            <span>Знайдемо майстра.</span>
-          </h1>
-
-          <p class="hero-sub">
-            Сантехніка, електрика, ремонт техніки та інші побутові задачі.
-            Створіть заявку — її побачать верифіковані фахівці у вашому районі.
-          </p>
-
-          <div class="hero-actions">
-            <button class="btn btn-primary btn-large" @click="start">
-              Почати зараз
-              <ArrowUpRight :size="19" />
-            </button>
-
-            <a class="text-link" href="#how-it-works">
-              Як це працює
-              <ArrowRight :size="17" />
-            </a>
-          </div>
-        </div>
-
-        <div
-          class="hero-visual"
-          aria-label="Приклад заявки на пошук майстра"
-        >
-          <div class="visual-glow"></div>
-
-          <div
-            class="tilt-card"
-            ref="card"
-            :style="style3d"
-            @pointermove="moveCard"
-            @pointerleave="resetCard"
-          >
-            <div class="card-top">
-              <span class="mini-label">ПРИКЛАД ЗАЯВКИ</span>
-
-              <span class="status">
-                <span></span>
-                Майстер знайдений
-              </span>
-            </div>
-
-            <div class="card-main">
-              <div class="card-icon">
-                <Droplets :size="24" />
-              </div>
-
-              <div>
-                <div class="card-category">Сантехніка</div>
-                <h3>Протікає змішувач</h3>
-                <p>Потрібна діагностика та ремонт</p>
-              </div>
-            </div>
-
-            <div class="card-divider"></div>
-
-            <div class="card-row">
-              <span>
-                <MapPin :size="16" />
-                Район обслуговування
-              </span>
-              <strong>Франківський р-н</strong>
-            </div>
-
-            <div class="master-preview">
-              <div class="avatar">А</div>
-              
-              <div class="master-details">
-                <strong>
-                  Андрій
-                  <CircleCheck :size="14" />
-                </strong>
-                <span>
-                  Верифікований майстер
-                </span>
-              </div>
-
-              <div class="master-check">
-                <Check :size="17" />
-              </div>
-            </div>
-          </div>
-
-          <div class="floating-note">
-            <span class="note-icon">
-              <ShieldCheck :size="19" />
-            </span>
-
-            <div>
-              <strong>Контроль якості</strong>
-              <small>Оцінки та розгляд скарг</small>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="services-section" id="services">
-        <div class="wrap">
-          <div class="section-heading">
-            <div>
-              <span class="section-kicker">КАТЕГОРІЇ</span>
-              <h2>З чим допоможемо</h2>
-            </div>
-          </div>
-
-          <div class="service-grid">
-            <div
-              v-for="item in services"
-              :key="item.name"
-              class="service-item"
-            >
-              <component
-                :is="item.icon"
-                :size="22"
-                :stroke-width="1.8"
-              />
-
-              <span>{{item.name}}</span>
-
-              <ChevronRight :size="17" class="service-chevron" />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="steps-section wrap" id="how-it-works">
-        <div class="section-heading">
-          <div>
-            <span class="section-kicker">ПРОЦЕС</span>
-            <h2>Три кроки до вирішення</h2>
-          </div>
-        </div>
-
-        <div class="steps-grid">
-          <article
-            v-for="step in steps"
-            :key="step.number"
-            class="step"
-          >
-            <span class="step-number">{{step.number}}</span>
-            <h3>{{step.title}}</h3>
-            <p>{{step.desc}}</p>
-          </article>
-        </div>
-      </section>
-
-      <section class="master-section wrap" id="for-masters">
-        <div class="master-panel">
-          <div class="master-symbol">
-            <UserRoundCheck :size="27" :stroke-width="1.7" />
-          </div>
-
-          <div class="master-copy">
-            <span class="section-kicker">ДЛЯ СПЕЦІАЛІСТІВ</span>
-            <h2>Знаходьте заявки за своїм профілем.</h2>
-            <p>
-              Пройдіть верифікацію та отримуйте доступ до заявок у вашій
-              категорії та зоні обслуговування.
-            </p>
-          </div>
-
-          <button class="btn btn-outline" @click="start">
-            Стати майстром
-            <ArrowUpRight :size="18" />
-          </button>
-        </div>
-      </section>
-    </main>
-
-    <footer class="footer wrap">
-      <a class="footer-brand" href="#top">
-        <img src="/public/logo.png" alt="" draggable="false" />
-        NoMoreTears<span>.</span>
-      </a>
-
-      <span>© {{new Date().getFullYear()}} NoMoreTears</span>
-
-      <a href="#top">На початок ↑</a>
-    </footer>
-  </div>
+    <Home
+      v-else
+      key="home"
+    />
+  </Transition>
 </template>

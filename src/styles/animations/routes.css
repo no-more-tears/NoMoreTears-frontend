@@ -1,0 +1,16 @@
+
+/* Route transitions */
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: opacity .24s ease, transform .24s ease;
+}
+
+.page-fade-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.page-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}

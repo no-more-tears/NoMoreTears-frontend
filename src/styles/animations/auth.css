@@ -1,0 +1,53 @@
+
+.auth-form-fade-enter-active,
+.auth-form-fade-leave-active {
+  transition: opacity .2s ease, transform .2s ease;
+}
+
+.auth-form-fade-enter-from {
+  opacity: 0;
+  transform: translateY(9px);
+}
+
+.auth-form-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-9px);
+}
+
+.auth-field input.input-error,
+.auth-field input.input-error:focus {
+  border-color: #e5484d;
+  box-shadow: 0 0 0 2px rgba(229,72,77,.13);
+}
+
+.auth-mismatch {
+  margin: -9px 0 0;
+  text-align: center;
+  color: #e5484d;
+  font-size: 13px;
+  font-weight: 600;
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
+.auth-legal-note {
+  max-width: 390px;
+  text-align: center;
+  margin: 31px auto 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.auth-legal-note a,
+.legal-related a {
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.auth-legal-note a:hover,
+.legal-related a:hover {
+  color: var(--accent);
+}

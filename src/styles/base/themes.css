@@ -1,0 +1,43 @@
+:root[data-theme='light'] {
+  --bg: #f8f9f7;
+  --surface: #fff;
+  --surface2: #f0f2ef;
+  --text: #1a1e1a;
+  --muted: #687069;
+  --border: #dfe4dc;
+  --accent: #274c7d;
+  --accent-text: #fff;
+  --card: #fff;
+  --green-subtle: #e8f4e4;
+}
+
+:root[data-theme='light'] .brand-dot,
+:root[data-theme='light'] .footer-brand span {
+  color: var(--accent);
+}
+
+:root[data-theme='light'] .btn-primary:hover {
+  background: #067cc0;
+}
+
+:root[data-theme='light'] .status {
+    background: #b3e4ff;
+}
+
+:root[data-theme='light'] .tilt-card {
+  border-color: #d9e2d7;
+  box-shadow: 0 32px 70px rgba(36,65,32,.12);
+}
+
+:root[data-theme='light'] .avatar {
+  background: #168cdb;
+  color: #caeeff;
+}
+
+:root[data-theme='light'] .floating-note {
+  box-shadow: 0 15px 40px rgba(30,50,30,.12);
+}
+
+:root[data-theme='light'] .master-symbol {
+  background: #b3e4ff;
+}
